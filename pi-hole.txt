@@ -1,0 +1,52 @@
+# setup
+
+# ----- on ubuntu -----
+sudo rm /etc/resolv.conf 
+sudo ln -s ../run/systemd/resolve/resolv.conf /etc/resolv.conf
+sudo systemctl disable --now systemd-resolved.service
+# ---------------------
+
+sudo curl -L "https://github.com/docker/compose/releases/download/1.27.4/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+sudo chmod +x /usr/local/bin/docker-compose
+sudo docker pull pihole/pihole
+
+mkdir etc-pihole
+mkdir etc-dnsmasq.d
+
+# https://hub.docker.com/r/pihole/pihole
+# https://github.com/pi-hole/docker-pi-hole
+# https://docs.pi-hole.net
+
+cat > docker-compose.yml <<\EOF
+version: "3"
+
+# More info at https://github.com/pi-hole/docker-pi-hole/ and https://docs.pi-hole.net/
+services:
+  pihole:
+    container_name: pihole
+    image: pihole/pihole:latest
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
+      - "67:67/udp"
+      - "80:80/tcp"
+      - "443:443/tcp"
+    environment:
+      TZ: 'America/Chicago'
+      # WEBPASSWORD: 'set a secure password here or it will be random'
+    # Volumes store your data between container upgrades
+    volumes:
+      - './etc-pihole/:/etc/pihole/'
+      - './etc-dnsmasq.d/:/etc/dnsmasq.d/'
+    # Recommended but not required (DHCP needs NET_ADMIN)
+    #   https://github.com/pi-hole/docker-pi-hole#note-on-capabilities
+    # cap_add:
+    #   - NET_ADMIN
+    # restart: unless-stopped
+    restart: always
+EOF
+
+# update
+
+sudo docker pull pihole/pihole | grep "Downloaded newer image" && sudo docker-compose down && sudo docker-compose up -d
+
